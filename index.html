@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Liquid Glass - Pure HTML/CSS/JS Demo</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <div class="container">
+            <h1>Liquid Glass</h1>
+            <p class="subtitle">
+                Refraction with CSS and SVG — Pure HTML/CSS/JS Demo
+            </p>
+
+            <div class="chrome-notice">
+                <span class="chrome-notice-icon">⚠️</span>
+                <div class="chrome-notice-text">
+                    <strong>Chrome-only demo:</strong> The backdrop-filter with
+                    SVG filters currently only works in Chrome/Chromium-based
+                    browsers. Other browsers may show a fallback blur effect.
+                </div>
+            </div>
+
+            <section class="demo-section">
+                <h2 class="demo-title">Interactive Magnifying Glass</h2>
+                <div class="demo-area" id="demoArea">
+                    <div class="demo-content">
+                        <div class="demo-text">
+                            <div class="demo-label">
+                                <span class="demo-label-line"></span>
+                                <span class="demo-label-text"
+                                    >Optics Study</span
+                                >
+                            </div>
+                            <h3 class="demo-heading">
+                                Liquid Glass<span class="demo-heading-dim"
+                                    >—</span
+                                >Precision Lens
+                            </h3>
+                            <div class="demo-description">
+                                <p>
+                                    Drag the capsule to bend the page. This lens
+                                    is a compact SVG displacement rig that
+                                    refracts whatever sits beneath it.
+                                </p>
+                                <p>
+                                    The field comes from a rounded bezel
+                                    profile; pixels are pushed along its
+                                    gradient, then topped with a subtle specular
+                                    bloom for depth.
+                                </p>
+                                <p style="opacity: 0.7">
+                                    Sweep across strong edges—high contrast
+                                    makes the bend snap.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="demo-image">
+                            <img
+                                src="https://images.unsplash.com/photo-1579380656108-f98e4df8ea62?q=80&w=800&auto=format&fit=crop"
+                                alt="Abstract architectural lines"
+                                loading="lazy"
+                                draggable="false"
+                            />
+                        </div>
+                    </div>
+
+                    <div
+                        class="glass-element"
+                        id="glassElement"
+                        style="
+                            left: 40px;
+                            top: 40px;
+                            width: 200px;
+                            height: 140px;
+                            border-radius: 70px;
+                        "
+                    >
+                        <div class="glass-inner" id="glassInner"></div>
+                    </div>
+                </div>
+
+                <div class="controls-panel">
+                    <div class="controls-header">
+                        <span class="controls-header-text">Parameters</span>
+                        <span class="controls-header-line"></span>
+                    </div>
+
+                    <div class="control-row">
+                        <label class="control-label">Surface Type</label>
+                        <div class="surface-selector">
+                            <button
+                                class="surface-btn active"
+                                data-surface="convex_squircle"
+                            >
+                                Convex Squircle
+                            </button>
+                            <button
+                                class="surface-btn"
+                                data-surface="convex_circle"
+                            >
+                                Convex Circle
+                            </button>
+                            <button class="surface-btn" data-surface="concave">
+                                Concave
+                            </button>
+                            <button class="surface-btn" data-surface="lip">
+                                Lip
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="control-row">
+                        <label class="control-label">Bezel Width</label>
+                        <span class="control-value" id="bezelWidthValue"
+                            >30</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="bezelWidth"
+                            min="5"
+                            max="70"
+                            value="30"
+                        />
+                    </div>
+
+                    <div class="control-row">
+                        <label class="control-label">Glass Thickness</label>
+                        <span class="control-value" id="glassThicknessValue"
+                            >80</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="glassThickness"
+                            min="10"
+                            max="200"
+                            value="80"
+                        />
+                    </div>
+
+                    <div class="control-row">
+                        <label class="control-label">Refraction Scale</label>
+                        <span class="control-value" id="refractionScaleValue"
+                            >1.00</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="refractionScale"
+                            min="0"
+                            max="1.5"
+                            step="0.01"
+                            value="1"
+                        />
+                    </div>
+
+                    <div class="control-row">
+                        <label class="control-label">Specular Opacity</label>
+                        <span class="control-value" id="specularOpacityValue"
+                            >0.50</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="specularOpacity"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value="0.5"
+                        />
+                    </div>
+
+                    <div class="control-row">
+                        <label class="control-label">Blur</label>
+                        <span class="control-value" id="blurValue">0.5</span>
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="blur"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value="0.5"
+                        />
+                    </div>
+                </div>
+            </section>
+
+            <section class="demo-section">
+                <h2 class="demo-title">Generated Maps</h2>
+                <div class="preview-grid">
+                    <div class="preview-card">
+                        <div class="preview-header">Displacement Map</div>
+                        <div class="preview-content">
+                            <canvas
+                                id="displacementPreview"
+                                class="preview-canvas"
+                                width="200"
+                                height="140"
+                            ></canvas>
+                        </div>
+                    </div>
+                    <div class="preview-card">
+                        <div class="preview-header">Specular Highlight</div>
+                        <div class="preview-content">
+                            <canvas
+                                id="specularPreview"
+                                class="preview-canvas"
+                                width="200"
+                                height="140"
+                            ></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="footer">
+                <p>
+                    Ported from the
+                    <a href="https://kube.io" target="_blank">kube.io</a> Liquid
+                    Glass article.
+                </p>
+                <p>Based on Apple's Liquid Glass effect from WWDC 2025.</p>
+            </footer>
+        </div>
+
+        <svg class="filter-svg" color-interpolation-filters="sRGB">
+            <defs>
+                <filter
+                    id="liquidGlassFilter"
+                    color-interpolation-filters="sRGB"
+                >
+                    <feGaussianBlur
+                        id="filterBlur"
+                        in="SourceGraphic"
+                        stdDeviation="0.5"
+                        result="blurred"
+                    />
+                    <feImage
+                        id="displacementImage"
+                        href=""
+                        x="0"
+                        y="0"
+                        width="200"
+                        height="140"
+                        result="displacement_map"
+                        preserveAspectRatio="none"
+                    />
+                    <feDisplacementMap
+                        id="displacementMap"
+                        in="blurred"
+                        in2="displacement_map"
+                        scale="50"
+                        xChannelSelector="R"
+                        yChannelSelector="G"
+                        result="displaced"
+                    />
+                    <feColorMatrix
+                        in="displaced"
+                        type="saturate"
+                        values="1.3"
+                        result="displaced_saturated"
+                    />
+                    <feImage
+                        id="specularImage"
+                        href=""
+                        x="0"
+                        y="0"
+                        width="200"
+                        height="140"
+                        result="specular_layer"
+                        preserveAspectRatio="none"
+                    />
+                    <feComponentTransfer
+                        in="specular_layer"
+                        result="specular_faded"
+                    >
+                        <feFuncA id="specularAlpha" type="linear" slope="0.5" />
+                    </feComponentTransfer>
+                    <feBlend
+                        in="specular_faded"
+                        in2="displaced_saturated"
+                        mode="screen"
+                    />
+                </filter>
+            </defs>
+        </svg>
+
+        <script src="scripts.js"></script>
+    </body>
+</html>
