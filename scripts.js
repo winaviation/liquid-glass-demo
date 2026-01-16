@@ -46,10 +46,10 @@ class Spring {
 const state = {
   surfaceType: "convex_squircle",
   bezelWidth: 30,
-  glassThickness: 80,
+  glassThickness: 150,
   refractiveIndex: 1.5,
-  refractionScale: 1,
-  specularOpacity: 0.5,
+  refractionScale: 1.5,
+  specularOpacity: 1,
   blur: 0.5,
   objectWidth: 200,
   objectHeight: 140,
