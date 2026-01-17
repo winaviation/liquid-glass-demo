@@ -171,7 +171,7 @@ function updateModeUI() {
     noticeText.innerHTML =
       "<strong>Cross-browser compatible:</strong> " +
       "This demo uses SVG filters with the regular <code>filter</code> property " +
-      "instead of <code>backdrop-filter</code>, making it work in Safari, Firefox, and Chrome.";
+      "instead of <code>backdrop-filter</code>, making it work in Firefox and Chrome. (Pardon me, Safari is broken for whatever reasons)";
     browserNotice.style.background =
       "linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))";
     browserNotice.style.borderColor = "rgba(102, 126, 234, 0.3)";
