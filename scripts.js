@@ -2,7 +2,7 @@
 const SurfaceEquations = {
   convex_circle: (x) => Math.sqrt(1 - Math.pow(1 - x, 2)),
   convex_squircle: (x) => Math.pow(1 - Math.pow(1 - x, 4), 1 / 4),
-  concave: (x) => 1 - Math.sqrt(1 - Math.pow(1 - x, 2)),
+  concave: (x) => 1 - Math.sqrt(1 - Math.pow(x, 2)),
   lip: (x) => {
     const convex = Math.pow(1 - Math.pow(1 - Math.min(x * 2, 1), 4), 1 / 4);
     const concave = 1 - Math.sqrt(1 - Math.pow(1 - x, 2)) + 0.1;
@@ -85,8 +85,179 @@ let animationFrameId = null;
 const glassElement = document.getElementById("glassElement");
 const glassInner = document.getElementById("glassInner");
 const demoArea = document.getElementById("demoArea");
+const demoContent = document.getElementById("demoContent");
+const glassFilterSvg = document.getElementById("glassFilterSvg");
+const glassContentClone = document.getElementById("glassContentClone");
+const demoContentInner = document.getElementById("demoContentInner");
 const displacementPreview = document.getElementById("displacementPreview");
 const specularPreview = document.getElementById("specularPreview");
+
+// Feature detection for backdrop-filter with SVG
+let useBackdropFilter = false;
+let backdropFilterSupported = false;
+
+function detectBackdropFilterSupport() {
+  // Check if browser supports backdrop-filter with SVG url()
+  // This is currently only Chrome/Chromium
+  const isChromium = !!window.chrome;
+  const testEl = document.createElement("div");
+  testEl.style.backdropFilter = "url(#test)";
+  const supportsBackdropFilterUrl = testEl.style.backdropFilter.includes("url");
+
+  backdropFilterSupported = isChromium && supportsBackdropFilterUrl;
+  useBackdropFilter = backdropFilterSupported;
+
+  // Update UI
+  updateModeUI();
+
+  if (useBackdropFilter) {
+    glassElement.classList.add("use-backdrop-filter");
+    console.log("Using native backdrop-filter (better performance)");
+  } else {
+    console.log("Using cloned content fallback (cross-browser)");
+  }
+}
+
+function updateModeUI() {
+  const modeToggle = document.getElementById("modeToggle");
+  const modeValue = document.getElementById("modeValue");
+  const modeUnsupported = document.getElementById("modeUnsupported");
+  const browserNotice = document.getElementById("browserNotice");
+  const noticeIcon = document.getElementById("noticeIcon");
+  const noticeText = document.getElementById("noticeText");
+
+  if (useBackdropFilter) {
+    modeToggle.classList.add("active");
+    modeValue.textContent = "Backdrop-filter";
+  } else {
+    modeToggle.classList.remove("active");
+    modeValue.textContent = "Clone (Fallback)";
+  }
+
+  // Show warning if backdrop-filter not supported but toggle is on
+  if (!backdropFilterSupported) {
+    modeUnsupported.style.display = useBackdropFilter ? "inline" : "none";
+  }
+
+  // Show/hide mode notice for clone mode
+  const modeNoticeRow = document.getElementById("modeNoticeRow");
+  if (modeNoticeRow) {
+    modeNoticeRow.style.display = useBackdropFilter ? "none" : "flex";
+  }
+
+  // Update browser notice dynamically
+  if (useBackdropFilter) {
+    if (backdropFilterSupported) {
+      noticeIcon.textContent = "⚡";
+      noticeText.innerHTML =
+        "<strong>Using native backdrop-filter:</strong> " +
+        "Your browser supports <code>backdrop-filter</code> with SVG filters. " +
+        "This provides the best performance via GPU compositing.";
+      browserNotice.style.background =
+        "linear-gradient(135deg, rgba(72, 187, 120, 0.1), rgba(56, 161, 105, 0.1))";
+      browserNotice.style.borderColor = "rgba(72, 187, 120, 0.3)";
+    } else {
+      noticeIcon.textContent = "⚠️";
+      noticeText.innerHTML =
+        "<strong>Backdrop-filter not supported:</strong> " +
+        "Your browser doesn't support <code>backdrop-filter</code> with SVG filters. " +
+        "The effect won't render correctly. Switch to Clone mode for proper display.";
+      browserNotice.style.background =
+        "linear-gradient(135deg, rgba(245, 101, 101, 0.1), rgba(229, 62, 62, 0.1))";
+      browserNotice.style.borderColor = "rgba(245, 101, 101, 0.3)";
+    }
+  } else {
+    noticeIcon.textContent = "✨";
+    noticeText.innerHTML =
+      "<strong>Cross-browser compatible:</strong> " +
+      "This demo uses SVG filters with the regular <code>filter</code> property " +
+      "instead of <code>backdrop-filter</code>, making it work in Safari, Firefox, and Chrome.";
+    browserNotice.style.background =
+      "linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))";
+    browserNotice.style.borderColor = "rgba(102, 126, 234, 0.3)";
+  }
+}
+
+function toggleRenderMode() {
+  useBackdropFilter = !useBackdropFilter;
+
+  if (useBackdropFilter) {
+    glassElement.classList.add("use-backdrop-filter");
+    // Clear the clone filter when using backdrop
+    glassContentClone.style.filter = "none";
+  } else {
+    glassElement.classList.remove("use-backdrop-filter");
+    // Re-apply filter to clone
+    glassContentClone.style.filter = "url(#liquidGlassFilter)";
+    updateContentClonePosition(true);
+  }
+
+  updateModeUI();
+  console.log(
+    useBackdropFilter
+      ? "Switched to backdrop-filter mode"
+      : "Switched to clone fallback mode",
+  );
+}
+
+// Cached dimensions to avoid repeated getBoundingClientRect calls
+let cachedAreaRect = null;
+let lastAreaRectUpdate = 0;
+const RECT_CACHE_DURATION = 100; // ms
+
+function getAreaRect() {
+  const now = performance.now();
+  if (!cachedAreaRect || now - lastAreaRectUpdate > RECT_CACHE_DURATION) {
+    cachedAreaRect = demoArea.getBoundingClientRect();
+    lastAreaRectUpdate = now;
+  }
+  return cachedAreaRect;
+}
+
+// Throttle for position updates
+let lastPositionUpdate = 0;
+const POSITION_UPDATE_THROTTLE = 16; // ~60fps
+let pendingPositionUpdate = false;
+
+// Update the position of the cloned content inside the glass
+function updateContentClonePosition(force = false) {
+  // Skip if using backdrop-filter
+  if (useBackdropFilter) return;
+
+  const now = performance.now();
+  if (!force && now - lastPositionUpdate < POSITION_UPDATE_THROTTLE) {
+    // Schedule update for next frame if not already pending
+    if (!pendingPositionUpdate) {
+      pendingPositionUpdate = true;
+      requestAnimationFrame(() => {
+        pendingPositionUpdate = false;
+        updateContentClonePosition(true);
+      });
+    }
+    return;
+  }
+  lastPositionUpdate = now;
+
+  const areaRect = getAreaRect();
+  const glassLeft = parseFloat(glassElement.style.left) || 0;
+  const glassTop = parseFloat(glassElement.style.top) || 0;
+
+  // Use transform instead of left/top for better performance
+  demoContentInner.style.width = areaRect.width + "px";
+  demoContentInner.style.height = areaRect.height + "px";
+  demoContentInner.style.transform = `translate(${-glassLeft}px, ${-glassTop}px)`;
+
+  // Apply the SVG filter to the cloned content (only once)
+  if (!glassContentClone.style.filter) {
+    glassContentClone.style.filter = "url(#liquidGlassFilter)";
+  }
+}
+
+// Invalidate rect cache on resize
+window.addEventListener("resize", () => {
+  cachedAreaRect = null;
+  updateContentClonePosition(true);
+});
 
 // Calculate displacement along a single radius using Snell's Law
 function calculateDisplacementMap1D(
@@ -113,7 +284,6 @@ function calculateDisplacementMap1D(
   for (let i = 0; i < samples; i++) {
     const x = i / samples;
     const y = surfaceFn(x);
-
     const dx = x < 1 ? 0.0001 : -0.0001;
     const y2 = surfaceFn(Math.max(0, Math.min(1, x + dx)));
     const derivative = (y2 - y) / dx;
@@ -158,17 +328,14 @@ function calculateDisplacementMap2D(
     0,
     (radius - bezelWidth) * (radius - bezelWidth),
   );
-
   const widthBetweenRadiuses = objectWidth - radius * 2;
   const heightBetweenRadiuses = objectHeight - radius * 2;
-
   const objectX = (canvasWidth - objectWidth) / 2;
   const objectY = (canvasHeight - objectHeight) / 2;
 
   for (let y1 = 0; y1 < objectHeight; y1++) {
     for (let x1 = 0; x1 < objectWidth; x1++) {
       const idx = ((objectY + y1) * canvasWidth + objectX + x1) * 4;
-
       const isOnLeftSide = x1 < radius;
       const isOnRightSide = x1 >= objectWidth - radius;
       const isOnTopSide = y1 < radius;
@@ -186,7 +353,6 @@ function calculateDisplacementMap2D(
           : 0;
 
       const distanceToCenterSquared = x * x + y * y;
-
       const isInBezel =
         distanceToCenterSquared <= radiusPlusOneSquared &&
         distanceToCenterSquared >= radiusMinusBezelSquared;
@@ -198,13 +364,10 @@ function calculateDisplacementMap2D(
             : 1 -
               (Math.sqrt(distanceToCenterSquared) - Math.sqrt(radiusSquared)) /
                 (Math.sqrt(radiusPlusOneSquared) - Math.sqrt(radiusSquared));
-
         const distanceFromCenter = Math.sqrt(distanceToCenterSquared);
         const distanceFromSide = radius - distanceFromCenter;
-
         const cos = distanceFromCenter > 0 ? x / distanceFromCenter : 0;
         const sin = distanceFromCenter > 0 ? y / distanceFromCenter : 0;
-
         const bezelRatio = Math.max(
           0,
           Math.min(1, distanceFromSide / bezelWidth),
@@ -214,7 +377,6 @@ function calculateDisplacementMap2D(
           precomputedMap[
             Math.max(0, Math.min(bezelIndex, precomputedMap.length - 1))
           ] || 0;
-
         const dX =
           maximumDisplacement > 0 ? (-cos * distance) / maximumDisplacement : 0;
         const dY =
@@ -233,11 +395,10 @@ function calculateDisplacementMap2D(
       }
     }
   }
-
   return imageData;
 }
 
-// Calculate specular highlight - thin bright edge
+// Calculate specular highlight
 function calculateSpecularHighlight(
   objectWidth,
   objectHeight,
@@ -246,27 +407,20 @@ function calculateSpecularHighlight(
   specularAngle = Math.PI / 3,
 ) {
   const imageData = new ImageData(objectWidth, objectHeight);
-
   const specularVector = [Math.cos(specularAngle), Math.sin(specularAngle)];
-
-  // Specular only appears within this many pixels of the edge
   const specularThickness = 1.5;
-
   const radiusSquared = radius * radius;
   const radiusPlusOneSquared = (radius + 1) * (radius + 1);
-  // Only process a thin band near the edge, not the whole bezel
   const radiusMinusSpecularSquared = Math.max(
     0,
     (radius - specularThickness) * (radius - specularThickness),
   );
-
   const widthBetweenRadiuses = objectWidth - radius * 2;
   const heightBetweenRadiuses = objectHeight - radius * 2;
 
   for (let y1 = 0; y1 < objectHeight; y1++) {
     for (let x1 = 0; x1 < objectWidth; x1++) {
       const idx = (y1 * objectWidth + x1) * 4;
-
       const isOnLeftSide = x1 < radius;
       const isOnRightSide = x1 >= objectWidth - radius;
       const isOnTopSide = y1 < radius;
@@ -284,8 +438,6 @@ function calculateSpecularHighlight(
           : 0;
 
       const distanceToCenterSquared = x * x + y * y;
-
-      // Only process thin edge region
       const isNearEdge =
         distanceToCenterSquared <= radiusPlusOneSquared &&
         distanceToCenterSquared >= radiusMinusSpecularSquared;
@@ -293,33 +445,23 @@ function calculateSpecularHighlight(
       if (isNearEdge) {
         const distanceFromCenter = Math.sqrt(distanceToCenterSquared);
         const distanceFromSide = radius - distanceFromCenter;
-
-        // Anti-aliasing at the outer edge
         const opacity =
           distanceToCenterSquared < radiusSquared
             ? 1
             : 1 -
               (distanceFromCenter - Math.sqrt(radiusSquared)) /
                 (Math.sqrt(radiusPlusOneSquared) - Math.sqrt(radiusSquared));
-
         const cos = distanceFromCenter > 0 ? x / distanceFromCenter : 0;
         const sin = distanceFromCenter > 0 ? -y / distanceFromCenter : 0;
-
-        // Dot product determines brightness based on light angle
         const dotProduct = Math.abs(
           cos * specularVector[0] + sin * specularVector[1],
         );
-
-        // Sharp falloff - only bright right at the edge
-        // This creates the thin bright line effect
         const edgeRatio = Math.max(
           0,
           Math.min(1, distanceFromSide / specularThickness),
         );
         const sharpFalloff = Math.sqrt(1 - (1 - edgeRatio) * (1 - edgeRatio));
-
         const coefficient = dotProduct * sharpFalloff;
-
         const color = Math.min(255, 255 * coefficient);
         const finalOpacity = Math.min(255, color * coefficient * opacity);
 
@@ -330,7 +472,6 @@ function calculateSpecularHighlight(
       }
     }
   }
-
   return imageData;
 }
 
@@ -347,19 +488,14 @@ function imageDataToDataURL(imageData) {
 // Update filter and previews
 function updateFilter(updateScale = true) {
   const surfaceFn = SurfaceEquations[state.surfaceType];
-
-  // Calculate 1D displacement map
   const precomputed = calculateDisplacementMap1D(
     state.glassThickness,
     state.bezelWidth,
     surfaceFn,
     state.refractiveIndex,
   );
-
-  // Find maximum displacement
   state.maximumDisplacement = Math.max(...precomputed.map(Math.abs));
 
-  // Calculate 2D displacement map
   const displacementData = calculateDisplacementMap2D(
     state.objectWidth,
     state.objectHeight,
@@ -370,8 +506,6 @@ function updateFilter(updateScale = true) {
     state.maximumDisplacement || 1,
     precomputed,
   );
-
-  // Calculate specular highlight
   const specularData = calculateSpecularHighlight(
     state.objectWidth,
     state.objectHeight,
@@ -379,11 +513,9 @@ function updateFilter(updateScale = true) {
     state.bezelWidth,
   );
 
-  // Convert to data URLs
   const displacementUrl = imageDataToDataURL(displacementData);
   const specularUrl = imageDataToDataURL(specularData);
 
-  // Update SVG filter
   document
     .getElementById("displacementImage")
     .setAttribute("href", displacementUrl);
@@ -402,23 +534,21 @@ function updateFilter(updateScale = true) {
     .getElementById("filterBlur")
     .setAttribute("stdDeviation", state.blur);
 
-  // Update glass element backdrop-filter
-  glassInner.style.backdropFilter = "url(#liquidGlassFilter)";
-  glassInner.style.webkitBackdropFilter = "url(#liquidGlassFilter)";
-
   // Update preview canvases
   const displacementCtx = displacementPreview.getContext("2d");
   displacementCtx.putImageData(displacementData, 0, 0);
 
   const specularCtx = specularPreview.getContext("2d");
   specularCtx.putImageData(specularData, 0, 0);
+
+  // Update clone position after filter update
+  updateContentClonePosition();
 }
 
 // Animation loop for spring physics
 function animationLoop(timestamp) {
-  const dt = Math.min(0.032, 1 / 60); // Cap delta time
+  const dt = Math.min(0.032, 1 / 60);
 
-  // Update spring targets based on dragging state
   if (state.isDragging) {
     springs.scale.setTarget(1.0);
     springs.shadowOffsetX.setTarget(4);
@@ -435,17 +565,14 @@ function animationLoop(timestamp) {
     springs.refractionBoost.setTarget(0.8);
   }
 
-  // Velocity-based squish (stretch in direction of movement)
   const velocityMagnitude = Math.sqrt(
     state.velocityX ** 2 + state.velocityY ** 2,
   );
   const squishAmount = Math.min(0.15, velocityMagnitude / 3000);
 
-  // Determine squish direction based on velocity
   if (velocityMagnitude > 50) {
     const vxNorm = state.velocityX / velocityMagnitude;
     const vyNorm = state.velocityY / velocityMagnitude;
-    // Stretch along velocity, compress perpendicular
     springs.scaleX.setTarget(
       1 +
         squishAmount * Math.abs(vxNorm) -
@@ -461,7 +588,6 @@ function animationLoop(timestamp) {
     springs.scaleY.setTarget(1);
   }
 
-  // Update all springs
   const scale = springs.scale.update(dt);
   const scaleX = springs.scaleX.update(dt);
   const scaleY = springs.scaleY.update(dt);
@@ -471,10 +597,8 @@ function animationLoop(timestamp) {
   const shadowAlpha = springs.shadowAlpha.update(dt);
   const refractionBoost = springs.refractionBoost.update(dt);
 
-  // Apply transforms
   glassElement.style.transform = `scale(${scale * scaleX}, ${scale * scaleY})`;
 
-  // Apply dynamic shadow
   const insetAlpha = shadowAlpha * 0.6;
   glassInner.style.boxShadow = `
                     ${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px rgba(0, 0, 0, ${shadowAlpha}),
@@ -482,19 +606,16 @@ function animationLoop(timestamp) {
                     inset ${-shadowOffsetX * 0.3}px ${-shadowOffsetY * 0.4}px 16px rgba(255, 255, 255, ${insetAlpha * 0.8})
                 `;
 
-  // Update refraction scale dynamically
   const dynamicRefractionScale = state.refractionScale * refractionBoost;
   document
     .getElementById("displacementMap")
     .setAttribute("scale", state.maximumDisplacement * dynamicRefractionScale);
 
-  // Decay velocity when not dragging
   if (!state.isDragging) {
     state.velocityX *= 0.95;
     state.velocityY *= 0.95;
   }
 
-  // Check if all springs are settled
   const allSettled =
     Object.values(springs).every((s) => s.isSettled()) &&
     Math.abs(state.velocityX) < 1 &&
@@ -535,7 +656,6 @@ function startDrag(e) {
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
   const rect = glassElement.getBoundingClientRect();
 
-  // Account for current scale when calculating offset
   const currentScale = springs.scale.value;
   const scaledWidth = state.objectWidth * currentScale;
   const scaledHeight = state.objectHeight * currentScale;
@@ -564,7 +684,6 @@ function drag(e) {
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
   const areaRect = demoArea.getBoundingClientRect();
 
-  // Calculate velocity
   const now = performance.now();
   const dt = Math.max(1, now - state.lastTime) / 1000;
   state.velocityX = (clientX - state.lastX) / dt;
@@ -576,12 +695,11 @@ function drag(e) {
   let newX = clientX - areaRect.left - state.dragOffset.x;
   let newY = clientY - areaRect.top - state.dragOffset.y;
 
-  // Constrain to demo area with some elasticity at edges
   const maxX = areaRect.width - state.objectWidth;
   const maxY = areaRect.height - state.objectHeight;
 
   if (newX < 0) {
-    newX = newX * 0.3; // Elastic resistance
+    newX = newX * 0.3;
   } else if (newX > maxX) {
     newX = maxX + (newX - maxX) * 0.3;
   }
@@ -594,13 +712,14 @@ function drag(e) {
 
   glassElement.style.left = newX + "px";
   glassElement.style.top = newY + "px";
+
+  updateContentClonePosition();
 }
 
 function endDrag() {
   if (!state.isDragging) return;
   state.isDragging = false;
 
-  // Snap back if outside bounds
   const areaRect = demoArea.getBoundingClientRect();
   let currentX = parseFloat(glassElement.style.left) || 0;
   let currentY = parseFloat(glassElement.style.top) || 0;
@@ -614,12 +733,12 @@ function endDrag() {
   glassElement.style.left = currentX + "px";
   glassElement.style.top = currentY + "px";
 
+  updateContentClonePosition();
   startAnimationLoop();
 }
 
 // Initialize controls
 function initControls() {
-  // Surface type buttons
   document.querySelectorAll(".surface-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       document
@@ -631,7 +750,6 @@ function initControls() {
     });
   });
 
-  // Sliders
   const sliders = {
     bezelWidth: {
       prop: "bezelWidth",
@@ -670,11 +788,16 @@ function initControls() {
 
 // Initialize
 function init() {
+  detectBackdropFilterSupport();
   initDragging();
   initControls();
   updateFilter(false);
+  updateContentClonePosition(true);
 
-  // Set initial spring values and start animation to apply initial state
+  // Set up mode toggle
+  const modeToggle = document.getElementById("modeToggle");
+  modeToggle.addEventListener("click", toggleRenderMode);
+
   springs.scale.value = 0.85;
   springs.scale.target = 0.85;
   startAnimationLoop();

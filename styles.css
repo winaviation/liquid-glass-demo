@@ -57,13 +57,13 @@ h1 {
     font-size: 1.1rem;
 }
 
-.chrome-notice {
+.browser-notice {
     background: linear-gradient(
         135deg,
-        rgba(255, 107, 107, 0.1),
-        rgba(255, 193, 7, 0.1)
+        rgba(102, 126, 234, 0.1),
+        rgba(118, 75, 162, 0.1)
     );
-    border: 1px solid rgba(255, 107, 107, 0.3);
+    border: 1px solid rgba(102, 126, 234, 0.3);
     border-radius: 12px;
     padding: 1rem 1.5rem;
     margin-bottom: 2rem;
@@ -72,11 +72,11 @@ h1 {
     gap: 1rem;
 }
 
-.chrome-notice-icon {
+.browser-notice-icon {
     font-size: 1.5rem;
 }
 
-.chrome-notice-text {
+.browser-notice-text {
     font-size: 0.9rem;
     line-height: 1.5;
 }
@@ -229,6 +229,7 @@ h1 {
     touch-action: none;
     user-select: none;
     will-change: transform;
+    overflow: hidden;
 }
 
 .glass-element:active {
@@ -240,6 +241,106 @@ h1 {
     height: 100%;
     border-radius: inherit;
     will-change: transform, box-shadow;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.glass-content-clone {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: inherit;
+    z-index: 1;
+    will-change: filter;
+    contain: strict;
+}
+
+/* Hide clone when using native backdrop-filter */
+.use-backdrop-filter .glass-content-clone {
+    display: none;
+}
+
+.glass-content-clone .demo-content-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 2rem;
+    pointer-events: none;
+    will-change: transform;
+    contain: layout style paint;
+    background-image:
+        linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        radial-gradient(
+            120% 100% at 10% 0%,
+            var(--bg-primary),
+            var(--bg-secondary)
+        );
+    background-size:
+        24px 24px,
+        24px 24px,
+        100% 100%;
+    background-position:
+        12px 12px,
+        12px 12px,
+        0 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .glass-content-clone .demo-content-inner {
+        background-image:
+            linear-gradient(
+                to right,
+                rgba(255, 255, 255, 0.03) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0.03) 1px,
+                transparent 1px
+            ),
+            radial-gradient(
+                120% 100% at 10% 0%,
+                var(--bg-primary),
+                var(--bg-secondary)
+            );
+    }
+}
+
+@media (max-width: 768px) {
+    .glass-content-clone .demo-content-inner {
+        grid-template-columns: 1fr;
+    }
+}
+
+.glass-content-clone .demo-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+.glass-filter-svg {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* Native backdrop-filter for supported browsers */
+.use-backdrop-filter .glass-inner {
+    backdrop-filter: url(#liquidGlassFilter);
+    -webkit-backdrop-filter: url(#liquidGlassFilter);
 }
 
 .controls-panel {
@@ -362,6 +463,70 @@ h1 {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
     border-color: transparent;
+}
+
+.mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mode-toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: rgba(128, 128, 128, 0.3);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.mode-toggle-switch.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.mode-toggle-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.mode-toggle-switch.active::after {
+    transform: translateX(20px);
+}
+
+.mode-toggle-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.8;
+}
+
+.mode-toggle-value {
+    font-size: 10px;
+    font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+    opacity: 0.6;
+    min-width: 100px;
+}
+
+.mode-unsupported {
+    font-size: 10px;
+    color: #e53e3e;
+    opacity: 0.8;
+}
+
+.mode-notice {
+    font-size: 11px;
+    opacity: 0.7;
+    line-height: 1.4;
+    font-style: italic;
 }
 
 .preview-grid {
