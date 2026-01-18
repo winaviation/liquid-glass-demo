@@ -19,7 +19,7 @@
     position: absolute;
     left: var(--track-left, 0);
     top: var(--track-top, 0);
-    width: 16px;
+    width: 167px;
     height: 68px;
     border-radius: 33.5px;
     background-color: var(--switch-track-color, #94949f77);
