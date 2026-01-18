@@ -803,9 +803,640 @@ function init() {
   startAnimationLoop();
 }
 
+// ===== SLIDER DEMO =====
+const sliderConfig = {
+  thumbWidth: 90,
+  thumbHeight: 60,
+  thumbRadius: 30,
+  trackWidth: 330,
+  trackHeight: 14,
+  bezelWidth: 16,
+  glassThickness: 80,
+  refractiveIndex: 1.45,
+  SCALE_REST: 0.6,
+  SCALE_DRAG: 1,
+};
+
+const sliderState = {
+  value: 10,
+  pointerDown: false,
+  forceActive: false,
+  specularOpacity: 0.4,
+  specularSaturation: 7,
+  refractionBase: 1,
+  blur: 0,
+  maximumDisplacement: 0,
+};
+
+const sliderSprings = {
+  scale: new Spring(sliderConfig.SCALE_REST, 2000, 80),
+  backgroundOpacity: new Spring(1, 2000, 80),
+  scaleRatio: new Spring(0.4, 100, 10), // motion default: stiffness=100, damping=10
+};
+
+let sliderAnimationFrameId = null;
+
+function getSliderActive() {
+  return sliderState.forceActive || sliderState.pointerDown;
+}
+
+function updateSliderFilter() {
+  const surfaceFn = SurfaceEquations.convex_squircle;
+  const precomputed = calculateDisplacementMap1D(
+    sliderConfig.glassThickness,
+    sliderConfig.bezelWidth,
+    surfaceFn,
+    sliderConfig.refractiveIndex,
+  );
+  sliderState.maximumDisplacement = Math.max(...precomputed.map(Math.abs));
+
+  const displacementData = calculateDisplacementMap2D(
+    sliderConfig.thumbWidth,
+    sliderConfig.thumbHeight,
+    sliderConfig.thumbWidth,
+    sliderConfig.thumbHeight,
+    sliderConfig.thumbRadius,
+    sliderConfig.bezelWidth,
+    sliderState.maximumDisplacement || 1,
+    precomputed,
+  );
+
+  const specularData = calculateSpecularHighlight(
+    sliderConfig.thumbWidth,
+    sliderConfig.thumbHeight,
+    sliderConfig.thumbRadius,
+    sliderConfig.bezelWidth,
+  );
+
+  const displacementUrl = imageDataToDataURL(displacementData);
+  const specularUrl = imageDataToDataURL(specularData);
+
+  document
+    .getElementById("sliderDisplacementImage")
+    .setAttribute("href", displacementUrl);
+  document
+    .getElementById("sliderSpecularImage")
+    .setAttribute("href", specularUrl);
+  document
+    .getElementById("sliderSpecularAlpha")
+    .setAttribute("slope", sliderState.specularOpacity);
+  document
+    .getElementById("sliderFilterBlur")
+    .setAttribute("stdDeviation", sliderState.blur);
+
+  document
+    .getElementById("sliderSaturation")
+    .setAttribute("values", sliderState.specularSaturation);
+}
+
+function sliderAnimationLoop() {
+  const dt = Math.min(0.032, 1 / 60);
+  const isActive = getSliderActive();
+
+  // Update spring targets
+  sliderSprings.scale.setTarget(
+    isActive ? sliderConfig.SCALE_DRAG : sliderConfig.SCALE_REST,
+  );
+  sliderSprings.backgroundOpacity.setTarget(isActive ? 0.1 : 1);
+  const pressMultiplier = isActive ? 0.9 : 0.4;
+  sliderSprings.scaleRatio.setTarget(
+    pressMultiplier * sliderState.refractionBase,
+  );
+
+  const scale = sliderSprings.scale.update(dt);
+  const backgroundOpacity = sliderSprings.backgroundOpacity.update(dt);
+  const scaleRatio = sliderSprings.scaleRatio.update(dt);
+
+  const sliderThumb = document.getElementById("sliderThumb");
+  const sliderThumbClone = document.getElementById("sliderThumbClone");
+
+  sliderThumb.style.transform = `scale(${scale})`;
+  sliderThumb.style.backgroundColor = `rgba(255, 255, 255, ${backgroundOpacity})`;
+
+  // Hide clone when background is opaque (not active), show when translucent (active)
+  // Clone opacity is inverse of background opacity
+  const cloneOpacity = 1 - backgroundOpacity;
+  sliderThumbClone.style.opacity = cloneOpacity;
+
+  // Update displacement scale
+  const dynamicScale = sliderState.maximumDisplacement * scaleRatio;
+  document
+    .getElementById("sliderDisplacementMap")
+    .setAttribute("scale", dynamicScale);
+
+  const allSettled = Object.values(sliderSprings).every((s) => s.isSettled());
+  if (!allSettled) {
+    sliderAnimationFrameId = requestAnimationFrame(sliderAnimationLoop);
+  } else {
+    sliderAnimationFrameId = null;
+  }
+}
+
+function startSliderAnimation() {
+  if (!sliderAnimationFrameId) {
+    sliderAnimationFrameId = requestAnimationFrame(sliderAnimationLoop);
+  }
+}
+
+function initSliderDemo() {
+  const sliderThumb = document.getElementById("sliderThumb");
+  const sliderTrack = document.getElementById("sliderTrack");
+  const sliderFill = document.getElementById("sliderFill");
+  const sliderThumbClone = document.getElementById("sliderThumbClone");
+  const sliderForceActive = document.getElementById("sliderForceActive");
+  const sliderThumbCloneInner = document.getElementById(
+    "sliderThumbCloneInner",
+  );
+
+  updateSliderFilter();
+  sliderThumbClone.style.filter = "url(#sliderGlassFilter)";
+
+  const thumbWidthRest = sliderConfig.thumbWidth * sliderConfig.SCALE_REST;
+
+  function updateSliderUI() {
+    sliderFill.style.width = sliderState.value + "%";
+
+    // Update thumb x position based on value
+    const ratio = sliderState.value / 100;
+    const x0 = thumbWidthRest / 2;
+    const x100 = sliderConfig.trackWidth - thumbWidthRest / 2;
+    const thumbCenterX = x0 + ratio * (x100 - x0);
+    const thumbX = thumbCenterX - sliderConfig.thumbWidth / 2;
+    sliderThumb.style.left = thumbX + "px";
+
+    // Update clone position
+    const sliderDemoArea = document.getElementById("sliderDemoArea");
+    const areaRect = sliderDemoArea.getBoundingClientRect();
+    const containerLeft = (areaRect.width - sliderConfig.trackWidth) / 2;
+    const containerTop = (areaRect.height - sliderConfig.thumbHeight) / 2;
+    const trackTop = (sliderConfig.thumbHeight - sliderConfig.trackHeight) / 2;
+
+    sliderThumbCloneInner.style.width = areaRect.width + "px";
+    sliderThumbCloneInner.style.height = areaRect.height + "px";
+    sliderThumbCloneInner.style.transform = `translate(${-(containerLeft + thumbX)}px, ${-containerTop}px)`;
+
+    // Position pseudo-elements for track/fill inside clone
+    sliderThumbCloneInner.style.setProperty(
+      "--track-left",
+      `${containerLeft}px`,
+    );
+    sliderThumbCloneInner.style.setProperty(
+      "--track-top",
+      `${containerTop + trackTop}px`,
+    );
+    sliderThumbCloneInner.style.setProperty(
+      "--fill-width",
+      sliderState.value.toString(),
+    );
+  }
+
+  function onPointerDown(e) {
+    e.preventDefault();
+    sliderState.pointerDown = true;
+    startSliderAnimation();
+  }
+
+  function onPointerMove(e) {
+    if (!sliderState.pointerDown) return;
+    e.preventDefault();
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const trackRect = sliderTrack.getBoundingClientRect();
+
+    const x0 = trackRect.left + thumbWidthRest / 2;
+    const x100 = trackRect.right - thumbWidthRest / 2;
+    const trackInsideWidth = x100 - x0;
+
+    const x = Math.max(x0, Math.min(x100, clientX));
+    const ratio = (x - x0) / trackInsideWidth;
+    sliderState.value = Math.max(0, Math.min(100, ratio * 100));
+
+    updateSliderUI();
+  }
+
+  function onPointerUp() {
+    sliderState.pointerDown = false;
+    startSliderAnimation();
+  }
+
+  sliderThumb.addEventListener("mousedown", onPointerDown);
+  sliderThumb.addEventListener("touchstart", onPointerDown, { passive: false });
+  sliderTrack.addEventListener("mousedown", (e) => {
+    onPointerDown(e);
+    onPointerMove(e);
+  });
+
+  window.addEventListener("mousemove", onPointerMove);
+  window.addEventListener("touchmove", onPointerMove, { passive: false });
+  window.addEventListener("mouseup", onPointerUp);
+  window.addEventListener("touchend", onPointerUp);
+
+  sliderForceActive.addEventListener("change", (e) => {
+    sliderState.forceActive = e.target.checked;
+    startSliderAnimation();
+  });
+
+  // Setup controls
+  const sliderControls = {
+    sliderSpecularOpacity: {
+      prop: "specularOpacity",
+      format: (v) => v.toFixed(2),
+      update: () =>
+        document
+          .getElementById("sliderSpecularAlpha")
+          .setAttribute("slope", sliderState.specularOpacity),
+    },
+    sliderSpecularSaturation: {
+      prop: "specularSaturation",
+      format: (v) => Math.round(v).toString(),
+      update: () =>
+        document
+          .getElementById("sliderSaturation")
+          .setAttribute("values", sliderState.specularSaturation),
+    },
+    sliderRefraction: {
+      prop: "refractionBase",
+      format: (v) => v.toFixed(2),
+      update: () => startSliderAnimation(),
+    },
+    sliderBlur: {
+      prop: "blur",
+      format: (v) => v.toFixed(1),
+      update: () =>
+        document
+          .getElementById("sliderFilterBlur")
+          .setAttribute("stdDeviation", sliderState.blur),
+    },
+  };
+
+  Object.entries(sliderControls).forEach(([id, config]) => {
+    const slider = document.getElementById(id);
+    const valueDisplay = document.getElementById(id + "Value");
+    slider.addEventListener("input", () => {
+      const value = parseFloat(slider.value);
+      sliderState[config.prop] = value;
+      valueDisplay.textContent = config.format(value);
+      config.update();
+    });
+  });
+
+  // Initial render
+  updateSliderUI();
+  window.addEventListener("resize", updateSliderUI);
+  startSliderAnimation();
+}
+
+// ===== SWITCH DEMO =====
+const switchConfig = {
+  trackWidth: 160,
+  trackHeight: 67,
+  thumbWidth: 146,
+  thumbHeight: 92,
+  thumbRadius: 46,
+  bezelWidth: 19,
+  glassThickness: 47,
+  refractiveIndex: 1.5,
+  THUMB_REST_SCALE: 0.65,
+  THUMB_ACTIVE_SCALE: 0.9,
+};
+
+// Calculate travel distance
+switchConfig.THUMB_REST_OFFSET =
+  ((1 - switchConfig.THUMB_REST_SCALE) * switchConfig.thumbWidth) / 2;
+switchConfig.TRAVEL =
+  switchConfig.trackWidth -
+  switchConfig.trackHeight -
+  (switchConfig.thumbWidth - switchConfig.thumbHeight) *
+    switchConfig.THUMB_REST_SCALE;
+
+const switchState = {
+  checked: true,
+  pointerDown: false,
+  forceActive: false,
+  initialPointerX: 0,
+  xDragRatio: 1,
+  specularOpacity: 0.5,
+  specularSaturation: 6,
+  refractionBase: 1,
+  blur: 0.2,
+  maximumDisplacement: 0,
+};
+
+const switchSprings = {
+  xRatio: new Spring(1, 1000, 80),
+  scale: new Spring(switchConfig.THUMB_REST_SCALE, 2000, 80),
+  backgroundOpacity: new Spring(1, 2000, 80),
+  trackColor: new Spring(1, 1000, 80),
+  scaleRatio: new Spring(0.4, 100, 10), // motion default: stiffness=100, damping=10
+};
+
+let switchAnimationFrameId = null;
+
+function getSwitchActive() {
+  return switchState.forceActive || switchState.pointerDown;
+}
+
+function updateSwitchFilter() {
+  const surfaceFn = SurfaceEquations.convex_squircle;
+  const precomputed = calculateDisplacementMap1D(
+    switchConfig.glassThickness,
+    switchConfig.bezelWidth,
+    surfaceFn,
+    switchConfig.refractiveIndex,
+  );
+  switchState.maximumDisplacement = Math.max(...precomputed.map(Math.abs));
+
+  const displacementData = calculateDisplacementMap2D(
+    switchConfig.thumbWidth,
+    switchConfig.thumbHeight,
+    switchConfig.thumbWidth,
+    switchConfig.thumbHeight,
+    switchConfig.thumbRadius,
+    switchConfig.bezelWidth,
+    switchState.maximumDisplacement || 1,
+    precomputed,
+  );
+
+  const specularData = calculateSpecularHighlight(
+    switchConfig.thumbWidth,
+    switchConfig.thumbHeight,
+    switchConfig.thumbRadius,
+    switchConfig.bezelWidth,
+  );
+
+  const displacementUrl = imageDataToDataURL(displacementData);
+  const specularUrl = imageDataToDataURL(specularData);
+
+  document
+    .getElementById("switchDisplacementImage")
+    .setAttribute("href", displacementUrl);
+  document
+    .getElementById("switchSpecularImage")
+    .setAttribute("href", specularUrl);
+  document
+    .getElementById("switchSpecularAlpha")
+    .setAttribute("slope", switchState.specularOpacity);
+  document
+    .getElementById("switchFilterBlur")
+    .setAttribute("stdDeviation", switchState.blur);
+
+  document
+    .getElementById("switchSaturation")
+    .setAttribute("values", switchState.specularSaturation);
+}
+
+function switchAnimationLoop() {
+  const dt = Math.min(0.032, 1 / 60);
+  const isActive = getSwitchActive();
+
+  // Update spring targets
+  switchSprings.scale.setTarget(
+    isActive ? switchConfig.THUMB_ACTIVE_SCALE : switchConfig.THUMB_REST_SCALE,
+  );
+  switchSprings.backgroundOpacity.setTarget(isActive ? 0.1 : 1);
+  const pressMultiplier = isActive ? 0.9 : 0.4;
+  switchSprings.scaleRatio.setTarget(
+    pressMultiplier * switchState.refractionBase,
+  );
+
+  // xRatio target depends on dragging state
+  if (!switchState.pointerDown) {
+    switchSprings.xRatio.setTarget(switchState.checked ? 1 : 0);
+  }
+
+  // Track color based on position during drag or checked state when not dragging
+  const considerChecked = switchState.pointerDown
+    ? switchState.xDragRatio > 0.5
+      ? 1
+      : 0
+    : switchState.checked
+      ? 1
+      : 0;
+  switchSprings.trackColor.setTarget(considerChecked);
+
+  const xRatio = switchSprings.xRatio.update(dt);
+  const scale = switchSprings.scale.update(dt);
+  const backgroundOpacity = switchSprings.backgroundOpacity.update(dt);
+  const trackColor = switchSprings.trackColor.update(dt);
+  const scaleRatio = switchSprings.scaleRatio.update(dt);
+
+  const switchThumb = document.getElementById("switchThumb");
+  const switchTrack = document.getElementById("switchTrack");
+  const switchThumbClone = document.getElementById("switchThumbClone");
+  const switchThumbCloneInner = document.getElementById(
+    "switchThumbCloneInner",
+  );
+
+  // Hide clone when background is opaque (not active), show when translucent (active)
+  const cloneOpacity = 1 - backgroundOpacity;
+  switchThumbClone.style.opacity = cloneOpacity;
+
+  // Calculate thumb position
+  const marginLeft =
+    -switchConfig.THUMB_REST_OFFSET +
+    (switchConfig.trackHeight -
+      switchConfig.thumbHeight * switchConfig.THUMB_REST_SCALE) /
+      2;
+  const thumbX = marginLeft + xRatio * switchConfig.TRAVEL;
+
+  switchThumb.style.left = thumbX + "px";
+  switchThumb.style.transform = `translateY(-50%) scale(${scale})`;
+  switchThumb.style.backgroundColor = `rgba(255, 255, 255, ${backgroundOpacity})`;
+
+  // Box shadow with inset when pressed
+  if (switchState.pointerDown) {
+    switchThumb.style.boxShadow =
+      "0 4px 22px rgba(0,0,0,0.1), inset 2px 7px 24px rgba(0,0,0,0.09), inset -2px -7px 24px rgba(255,255,255,0.09)";
+  } else {
+    switchThumb.style.boxShadow = "0 4px 22px rgba(0,0,0,0.1)";
+  }
+
+  // Interpolate track color: #94949F77 (off) to #3BBF4EEE (on)
+  // Off: rgba(148, 148, 159, 0.47), On: rgba(59, 191, 78, 0.93)
+  const offR = 148,
+    offG = 148,
+    offB = 159,
+    offA = 0.47;
+  const onR = 59,
+    onG = 191,
+    onB = 78,
+    onA = 0.93;
+  const r = Math.round(offR + (onR - offR) * trackColor);
+  const g = Math.round(offG + (onG - offG) * trackColor);
+  const b = Math.round(offB + (onB - offB) * trackColor);
+  const a = offA + (onA - offA) * trackColor;
+  const trackBgColor = `rgba(${r}, ${g}, ${b}, ${a})`;
+  switchTrack.style.backgroundColor = trackBgColor;
+
+  // Update clone position
+  const switchDemoArea = document.getElementById("switchDemoArea");
+  const areaRect = switchDemoArea.getBoundingClientRect();
+  const containerLeft = (areaRect.width - switchConfig.trackWidth) / 2;
+  const containerTop = (areaRect.height - switchConfig.trackHeight) / 2;
+
+  switchThumbCloneInner.style.width = areaRect.width + "px";
+  switchThumbCloneInner.style.height = areaRect.height + "px";
+  // Thumb is positioned relative to track, which is centered
+  // thumbY offset: top: sliderHeight/2, y: -50% -> centered vertically in track
+  const thumbYOffset =
+    switchConfig.trackHeight / 2 - switchConfig.thumbHeight / 2;
+  switchThumbCloneInner.style.transform = `translate(${-(containerLeft + thumbX)}px, ${-(containerTop + thumbYOffset)}px)`;
+  switchThumbCloneInner.style.setProperty("--switch-track-color", trackBgColor);
+  switchThumbCloneInner.style.setProperty("--track-left", `${containerLeft}px`);
+  switchThumbCloneInner.style.setProperty("--track-top", `${containerTop}px`);
+
+  // Update displacement scale
+  const dynamicScale = switchState.maximumDisplacement * scaleRatio;
+  document
+    .getElementById("switchDisplacementMap")
+    .setAttribute("scale", dynamicScale);
+
+  const allSettled = Object.values(switchSprings).every((s) => s.isSettled());
+  if (!allSettled) {
+    switchAnimationFrameId = requestAnimationFrame(switchAnimationLoop);
+  } else {
+    switchAnimationFrameId = null;
+  }
+}
+
+function startSwitchAnimation() {
+  if (!switchAnimationFrameId) {
+    switchAnimationFrameId = requestAnimationFrame(switchAnimationLoop);
+  }
+}
+
+function initSwitchDemo() {
+  const switchThumb = document.getElementById("switchThumb");
+  const switchTrack = document.getElementById("switchTrack");
+  const switchThumbClone = document.getElementById("switchThumbClone");
+  const switchForceActive = document.getElementById("switchForceActive");
+
+  updateSwitchFilter();
+  switchThumbClone.style.filter = "url(#switchGlassFilter)";
+
+  function onPointerDown(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    switchState.pointerDown = true;
+    switchState.initialPointerX = e.touches ? e.touches[0].clientX : e.clientX;
+    switchState.xDragRatio = switchState.checked ? 1 : 0;
+    startSwitchAnimation();
+  }
+
+  function onPointerMove(e) {
+    if (!switchState.pointerDown) return;
+    e.stopPropagation();
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const baseRatio = switchState.checked ? 1 : 0;
+    const displacementX = clientX - switchState.initialPointerX;
+    let ratio = baseRatio + displacementX / switchConfig.TRAVEL;
+
+    // Damped overflow
+    const overflow = ratio < 0 ? -ratio : ratio > 1 ? ratio - 1 : 0;
+    const overflowSign = ratio < 0 ? -1 : 1;
+    const dampedOverflow = (overflowSign * overflow) / 22;
+    switchState.xDragRatio = Math.min(1, Math.max(0, ratio)) + dampedOverflow;
+
+    switchSprings.xRatio.setTarget(switchState.xDragRatio);
+    startSwitchAnimation();
+  }
+
+  function onPointerUp(e) {
+    if (!switchState.pointerDown) return;
+    switchState.pointerDown = false;
+
+    const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+    const distance = Math.abs(clientX - switchState.initialPointerX);
+
+    if (distance < 4) {
+      // Click - toggle
+      switchState.checked = !switchState.checked;
+    } else {
+      // Drag - decide based on position
+      switchState.checked = switchState.xDragRatio > 0.5;
+    }
+
+    startSwitchAnimation();
+  }
+
+  switchThumb.addEventListener("mousedown", onPointerDown);
+  switchThumb.addEventListener("touchstart", onPointerDown, { passive: false });
+
+  switchTrack.addEventListener("click", (e) => {
+    if (e.target === switchTrack) {
+      switchState.checked = !switchState.checked;
+      startSwitchAnimation();
+    }
+  });
+
+  window.addEventListener("mousemove", onPointerMove);
+  window.addEventListener("touchmove", onPointerMove, { passive: false });
+  window.addEventListener("mouseup", onPointerUp);
+  window.addEventListener("touchend", onPointerUp);
+
+  switchForceActive.addEventListener("change", (e) => {
+    switchState.forceActive = e.target.checked;
+    startSwitchAnimation();
+  });
+
+  // Setup controls
+  const switchControls = {
+    switchSpecularOpacity: {
+      prop: "specularOpacity",
+      format: (v) => v.toFixed(2),
+      update: () =>
+        document
+          .getElementById("switchSpecularAlpha")
+          .setAttribute("slope", switchState.specularOpacity),
+    },
+    switchSpecularSaturation: {
+      prop: "specularSaturation",
+      format: (v) => Math.round(v).toString(),
+      update: () =>
+        document
+          .getElementById("switchSaturation")
+          .setAttribute("values", switchState.specularSaturation),
+    },
+    switchRefraction: {
+      prop: "refractionBase",
+      format: (v) => v.toFixed(2),
+      update: () => startSwitchAnimation(),
+    },
+    switchBlur: {
+      prop: "blur",
+      format: (v) => v.toFixed(1),
+      update: () =>
+        document
+          .getElementById("switchFilterBlur")
+          .setAttribute("stdDeviation", switchState.blur),
+    },
+  };
+
+  Object.entries(switchControls).forEach(([id, config]) => {
+    const slider = document.getElementById(id);
+    const valueDisplay = document.getElementById(id + "Value");
+    slider.addEventListener("input", () => {
+      const value = parseFloat(slider.value);
+      switchState[config.prop] = value;
+      valueDisplay.textContent = config.format(value);
+      config.update();
+    });
+  });
+
+  // Initial render
+  startSwitchAnimation();
+}
+
 // Run on DOM ready
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded", () => {
+    init();
+    initSliderDemo();
+    initSwitchDemo();
+  });
 } else {
   init();
+  initSliderDemo();
+  initSwitchDemo();
 }

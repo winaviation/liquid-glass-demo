@@ -359,6 +359,389 @@
                 </div>
             </section>
 
+            <!-- Slider Demo -->
+            <section class="demo-section">
+                <h2 class="demo-title">Slider Demo</h2>
+                <div class="demo-area slider-demo-area" id="sliderDemoArea">
+                    <div class="slider-container">
+                        <div class="slider-track" id="sliderTrack">
+                            <div class="slider-track-inner">
+                                <div class="slider-fill" id="sliderFill"></div>
+                            </div>
+                        </div>
+                        <div class="slider-thumb" id="sliderThumb">
+                            <div
+                                class="slider-thumb-clone"
+                                id="sliderThumbClone"
+                            >
+                                <div
+                                    class="slider-thumb-clone-inner"
+                                    id="sliderThumbCloneInner"
+                                ></div>
+                            </div>
+                            <svg
+                                class="glass-filter-svg"
+                                id="sliderFilterSvg"
+                                style="width: 0; height: 0; position: absolute"
+                            >
+                                <defs>
+                                    <filter
+                                        id="sliderGlassFilter"
+                                        x="-50%"
+                                        y="-50%"
+                                        width="200%"
+                                        height="200%"
+                                        color-interpolation-filters="sRGB"
+                                    >
+                                        <feGaussianBlur
+                                            id="sliderFilterBlur"
+                                            in="SourceGraphic"
+                                            stdDeviation="0"
+                                            result="blurred_source"
+                                        />
+                                        <feImage
+                                            id="sliderDisplacementImage"
+                                            href=""
+                                            x="0"
+                                            y="0"
+                                            width="90"
+                                            height="60"
+                                            result="displacement_map"
+                                            preserveAspectRatio="none"
+                                        />
+                                        <feDisplacementMap
+                                            id="sliderDisplacementMap"
+                                            in="blurred_source"
+                                            in2="displacement_map"
+                                            scale="30"
+                                            xChannelSelector="R"
+                                            yChannelSelector="G"
+                                            result="displaced"
+                                        />
+                                        <feColorMatrix
+                                            id="sliderSaturation"
+                                            in="displaced"
+                                            type="saturate"
+                                            values="7"
+                                            result="displaced_saturated"
+                                        />
+                                        <feImage
+                                            id="sliderSpecularImage"
+                                            href=""
+                                            x="0"
+                                            y="0"
+                                            width="90"
+                                            height="60"
+                                            result="specular_layer"
+                                            preserveAspectRatio="none"
+                                        />
+                                        <feComposite
+                                            in="displaced_saturated"
+                                            in2="specular_layer"
+                                            operator="in"
+                                            result="specular_saturated"
+                                        />
+                                        <feComponentTransfer
+                                            in="specular_layer"
+                                            result="specular_faded"
+                                        >
+                                            <feFuncA
+                                                id="sliderSpecularAlpha"
+                                                type="linear"
+                                                slope="0.4"
+                                            />
+                                        </feComponentTransfer>
+                                        <feBlend
+                                            in="specular_saturated"
+                                            in2="displaced"
+                                            mode="normal"
+                                            result="withSaturation"
+                                        />
+                                        <feBlend
+                                            in="specular_faded"
+                                            in2="withSaturation"
+                                            mode="normal"
+                                        />
+                                    </filter>
+                                </defs>
+                            </svg>
+                            <div
+                                class="slider-thumb-inner"
+                                id="sliderThumbInner"
+                            ></div>
+                        </div>
+                    </div>
+                    <label class="force-active-label">
+                        <input type="checkbox" id="sliderForceActive" />
+                        Force active
+                    </label>
+                </div>
+                <div class="controls-panel">
+                    <div class="controls-header">
+                        <span class="controls-header-text"
+                            >Slider Parameters</span
+                        >
+                        <span class="controls-header-line"></span>
+                    </div>
+                    <div class="control-row">
+                        <label class="control-label">Specular Opacity</label>
+                        <span
+                            class="control-value"
+                            id="sliderSpecularOpacityValue"
+                            >0.40</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="sliderSpecularOpacity"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value="0.4"
+                        />
+                    </div>
+                    <div class="control-row">
+                        <label class="control-label">Specular Saturation</label>
+                        <span
+                            class="control-value"
+                            id="sliderSpecularSaturationValue"
+                            >7</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="sliderSpecularSaturation"
+                            min="0"
+                            max="50"
+                            step="1"
+                            value="7"
+                        />
+                    </div>
+                    <div class="control-row">
+                        <label class="control-label">Refraction Level</label>
+                        <span class="control-value" id="sliderRefractionValue"
+                            >1.00</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="sliderRefraction"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value="1"
+                        />
+                    </div>
+                    <div class="control-row">
+                        <label class="control-label">Blur Level</label>
+                        <span class="control-value" id="sliderBlurValue"
+                            >0.0</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="sliderBlur"
+                            min="0"
+                            max="40"
+                            step="0.1"
+                            value="0"
+                        />
+                    </div>
+                </div>
+            </section>
+
+            <!-- Switch Demo -->
+            <section class="demo-section">
+                <h2 class="demo-title">Switch Demo</h2>
+                <div class="demo-area switch-demo-area" id="switchDemoArea">
+                    <div class="switch-container">
+                        <div class="switch-track" id="switchTrack">
+                            <div class="switch-thumb" id="switchThumb">
+                                <div
+                                    class="switch-thumb-clone"
+                                    id="switchThumbClone"
+                                >
+                                    <div
+                                        class="switch-thumb-clone-inner"
+                                        id="switchThumbCloneInner"
+                                    ></div>
+                                </div>
+                                <svg
+                                    class="glass-filter-svg"
+                                    id="switchFilterSvg"
+                                    style="
+                                        width: 0;
+                                        height: 0;
+                                        position: absolute;
+                                    "
+                                >
+                                    <defs>
+                                        <filter
+                                            id="switchGlassFilter"
+                                            x="-50%"
+                                            y="-50%"
+                                            width="200%"
+                                            height="200%"
+                                            color-interpolation-filters="sRGB"
+                                        >
+                                            <feGaussianBlur
+                                                id="switchFilterBlur"
+                                                in="SourceGraphic"
+                                                stdDeviation="0.2"
+                                                result="blurred_source"
+                                            />
+                                            <feImage
+                                                id="switchDisplacementImage"
+                                                href=""
+                                                x="0"
+                                                y="0"
+                                                width="146"
+                                                height="92"
+                                                result="displacement_map"
+                                                preserveAspectRatio="none"
+                                            />
+                                            <feDisplacementMap
+                                                id="switchDisplacementMap"
+                                                in="blurred_source"
+                                                in2="displacement_map"
+                                                scale="25"
+                                                xChannelSelector="R"
+                                                yChannelSelector="G"
+                                                result="displaced"
+                                            />
+                                            <feColorMatrix
+                                                id="switchSaturation"
+                                                in="displaced"
+                                                type="saturate"
+                                                values="6"
+                                                result="displaced_saturated"
+                                            />
+                                            <feImage
+                                                id="switchSpecularImage"
+                                                href=""
+                                                x="0"
+                                                y="0"
+                                                width="146"
+                                                height="92"
+                                                result="specular_layer"
+                                                preserveAspectRatio="none"
+                                            />
+                                            <feComposite
+                                                in="displaced_saturated"
+                                                in2="specular_layer"
+                                                operator="in"
+                                                result="specular_saturated"
+                                            />
+                                            <feComponentTransfer
+                                                in="specular_layer"
+                                                result="specular_faded"
+                                            >
+                                                <feFuncA
+                                                    id="switchSpecularAlpha"
+                                                    type="linear"
+                                                    slope="0.5"
+                                                />
+                                            </feComponentTransfer>
+                                            <feBlend
+                                                in="specular_saturated"
+                                                in2="displaced"
+                                                mode="normal"
+                                                result="withSaturation"
+                                            />
+                                            <feBlend
+                                                in="specular_faded"
+                                                in2="withSaturation"
+                                                mode="normal"
+                                            />
+                                        </filter>
+                                    </defs>
+                                </svg>
+                                <div
+                                    class="switch-thumb-inner"
+                                    id="switchThumbInner"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+                    <label class="force-active-label">
+                        <input type="checkbox" id="switchForceActive" />
+                        Force active
+                    </label>
+                </div>
+                <div class="controls-panel">
+                    <div class="controls-header">
+                        <span class="controls-header-text"
+                            >Switch Parameters</span
+                        >
+                        <span class="controls-header-line"></span>
+                    </div>
+                    <div class="control-row">
+                        <label class="control-label">Specular Opacity</label>
+                        <span
+                            class="control-value"
+                            id="switchSpecularOpacityValue"
+                            >0.50</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="switchSpecularOpacity"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value="0.5"
+                        />
+                    </div>
+                    <div class="control-row">
+                        <label class="control-label">Specular Saturation</label>
+                        <span
+                            class="control-value"
+                            id="switchSpecularSaturationValue"
+                            >6</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="switchSpecularSaturation"
+                            min="0"
+                            max="50"
+                            step="1"
+                            value="6"
+                        />
+                    </div>
+                    <div class="control-row">
+                        <label class="control-label">Refraction Level</label>
+                        <span class="control-value" id="switchRefractionValue"
+                            >1.00</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="switchRefraction"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value="1"
+                        />
+                    </div>
+                    <div class="control-row">
+                        <label class="control-label">Blur Level</label>
+                        <span class="control-value" id="switchBlurValue"
+                            >0.2</span
+                        >
+                        <input
+                            type="range"
+                            class="control-slider"
+                            id="switchBlur"
+                            min="0"
+                            max="40"
+                            step="0.1"
+                            value="0.2"
+                        />
+                    </div>
+                </div>
+            </section>
+
             <section class="demo-section">
                 <h2 class="demo-title">Generated Maps</h2>
                 <div class="preview-grid">

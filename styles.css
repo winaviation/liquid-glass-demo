@@ -13,6 +13,18 @@
     --panel-bg: rgba(255, 255, 255, 0.9);
 }
 
+/* Track inside clone */
+.switch-thumb-clone-inner::before {
+    content: "";
+    position: absolute;
+    left: var(--track-left, 0);
+    top: var(--track-top, 0);
+    width: 16px;
+    height: 68px;
+    border-radius: 33.5px;
+    background-color: var(--switch-track-color, #94949f77);
+}
+
 @media (prefers-color-scheme: dark) {
     :root {
         --bg-primary: #1b1b22;
@@ -593,4 +605,290 @@ h1 {
     width: 0;
     height: 0;
     overflow: hidden;
+}
+
+/* ===== Slider Demo Styles ===== */
+.slider-demo-area {
+    height: 384px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.slider-container {
+    position: relative;
+    width: 330px;
+    height: 60px;
+}
+
+.slider-track {
+    display: inline-block;
+    position: absolute;
+    width: 330px;
+    height: 14px;
+    left: 0;
+    top: 23px; /* (60 - 14) / 2 */
+    background-color: #89898f66;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.slider-track-inner {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 7px;
+}
+
+.slider-fill {
+    height: 14px;
+    width: 10%;
+    border-radius: 6px;
+    background-color: #0377f7;
+}
+
+.slider-thumb {
+    position: absolute;
+    width: 90px;
+    height: 60px;
+    top: 0;
+    border-radius: 30px;
+    transform: scale(0.6);
+    transform-origin: center center;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    background-color: rgba(255, 255, 255, 1);
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    will-change: transform, background-color;
+}
+
+.slider-thumb-clone {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: inherit;
+    z-index: 1;
+    opacity: 0;
+    will-change: opacity;
+}
+
+.slider-thumb-clone-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        radial-gradient(
+            120% 100% at 10% 0%,
+            var(--bg-primary),
+            var(--bg-secondary)
+        );
+    background-size:
+        24px 24px,
+        24px 24px,
+        100% 100%;
+    background-position:
+        12px 12px,
+        12px 12px,
+        0 0;
+}
+
+/* Track inside clone */
+.slider-thumb-clone-inner::before {
+    content: "";
+    position: absolute;
+    left: var(--track-left, 0);
+    top: var(--track-top, 0);
+    width: 330px;
+    height: 14px;
+    border-radius: 7px;
+    background-color: #89898f66;
+    overflow: hidden;
+}
+
+/* Fill inside clone */
+.slider-thumb-clone-inner::after {
+    content: "";
+    position: absolute;
+    left: var(--track-left, 0);
+    top: var(--track-top, 0);
+    width: calc(330px * var(--fill-width, 10) / 100);
+    height: 14px;
+    border-radius: 6px;
+    background-color: #0377f7;
+}
+
+@media (prefers-color-scheme: dark) {
+    .slider-thumb-clone-inner {
+        background-image:
+            linear-gradient(
+                to right,
+                rgba(255, 255, 255, 0.03) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0.03) 1px,
+                transparent 1px
+            ),
+            radial-gradient(
+                120% 100% at 10% 0%,
+                var(--bg-primary),
+                var(--bg-secondary)
+            );
+    }
+}
+
+.slider-thumb-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* ===== Switch Demo Styles ===== */
+.switch-demo-area {
+    height: 384px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.switch-container {
+    position: relative;
+}
+
+.switch-track {
+    display: inline-block;
+    position: relative;
+    width: 160px;
+    height: 67px;
+    background-color: #94949f77;
+    border-radius: 33.5px;
+    cursor: pointer;
+}
+
+.switch-thumb {
+    position: absolute;
+    width: 146px;
+    height: 92px;
+    border-radius: 46px;
+    top: 33.5px; /* trackHeight / 2 */
+    transform: translateY(-50%) scale(0.65);
+    transform-origin: center center;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    background-color: rgba(255, 255, 255, 1);
+    box-shadow: 0 4px 22px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    will-change: transform, left, background-color, box-shadow;
+}
+
+.switch-thumb-clone {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: inherit;
+    z-index: 1;
+    opacity: 0;
+    will-change: opacity;
+}
+
+.switch-thumb-clone-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        radial-gradient(
+            120% 100% at 10% 0%,
+            var(--bg-primary),
+            var(--bg-secondary)
+        );
+    background-size:
+        24px 24px,
+        24px 24px,
+        100% 100%;
+    background-position:
+        12px 12px,
+        12px 12px,
+        0 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .switch-thumb-clone-inner {
+        background-image:
+            linear-gradient(
+                to right,
+                rgba(255, 255, 255, 0.03) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0.03) 1px,
+                transparent 1px
+            ),
+            radial-gradient(
+                120% 100% at 10% 0%,
+                var(--bg-primary),
+                var(--bg-secondary)
+            );
+    }
+}
+
+.switch-thumb-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Force active label */
+.force-active-label {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    .force-active-label {
+        background: rgba(0, 0, 0, 0.1);
+    }
+}
+
+.force-active-label input {
+    accent-color: #667eea;
 }
